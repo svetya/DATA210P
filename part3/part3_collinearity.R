@@ -1,3 +1,4 @@
+setwd("/Users/mishikaahuja/DATA210P/hw2")
 # ============================================================
 # DATA 200BP: Homework #2 - Part III: Collinearity Analysis
 # Dataset: day.csv (Bike Sharing)
