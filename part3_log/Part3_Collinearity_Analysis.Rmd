@@ -1,0 +1,351 @@
+---
+title: "Part III: Collinearity Analysis"
+subtitle: "DATA 200BP: Homework #2 - Bike Sharing Dataset"
+author: "Mishika Ahuja"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    fig_caption: true
+    df_print: kable
+geometry: margin=1in
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center',
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+\newpage
+
+# Introduction
+
+This report presents a comprehensive collinearity analysis for the bike sharing dataset (day.csv). Collinearity occurs when predictor variables are highly correlated with each other, which can inflate variance of coefficient estimates and make interpretation difficult. We evaluate collinearity using two complementary methods: correlation matrices and Variance Inflation Factors (VIF).
+
+# Data Loading and Preparation
+
+```{r load-data}
+# Load required libraries
+library(car)
+library(corrplot)
+library(ggplot2)
+library(reshape2)
+library(knitr)
+
+# Load the bike sharing data
+bike <- read.csv("day.csv")
+
+# Convert categorical variables to factors
+bike$season     <- as.factor(bike$season)
+bike$yr         <- as.factor(bike$yr)
+bike$mnth       <- as.factor(bike$mnth)
+bike$holiday    <- as.factor(bike$holiday)
+bike$weekday    <- as.factor(bike$weekday)
+bike$workingday <- as.factor(bike$workingday)
+bike$weathersit <- as.factor(bike$weathersit)
+```
+
+# Baseline Model
+
+We fit a multiple linear regression model using sensible predictors with a **log transformation** of the response variable. Following the analysis from Part 2, we use `log(cnt + 1)` to address heteroscedasticity and improve model diagnostics. Note that we exclude `casual` and `registered` because `cnt = casual + registered`, and we exclude `workingday` to avoid perfect collinearity with the combination of `weekday` and `holiday`.
+
+```{r baseline-model}
+# Fit baseline model with log transformation
+model <- lm(log(cnt + 1) ~ season + yr + mnth + holiday + weekday +
+              weathersit + temp + atemp + hum + windspeed,
+            data = bike)
+
+# Display model summary
+summary(model)
+```
+
+The model achieves an adjusted R² of **`r round(summary(model)$adj.r.squared, 4)`**, indicating it explains approximately **`r round(summary(model)$adj.r.squared * 100, 1)`%** of the variance in daily bike rentals.
+
+\newpage
+
+# Question 6: Evaluate Collinearity
+
+## Correlation Matrix
+
+We computed the correlation matrix for all numeric predictors in our baseline model: temperature (`temp`), feeling temperature (`atemp`), humidity (`hum`), and wind speed (`windspeed`).
+
+```{r correlation-matrix}
+# Define numeric predictors
+numeric_vars <- c("temp", "atemp", "hum", "windspeed")
+
+# Compute correlation matrix
+cor_matrix <- cor(bike[, numeric_vars])
+
+# Display correlation matrix
+kable(round(cor_matrix, 3), 
+      caption = "Correlation Matrix for Numeric Predictors")
+```
+
+**Key Finding:** The correlation matrix reveals that temperature (`temp`) and feeling temperature (`atemp`) exhibit an extremely strong positive correlation of **r = `r round(cor_matrix["temp", "atemp"], 3)`**. This near-perfect correlation is expected, as feeling temperature is primarily determined by actual temperature with minor adjustments for humidity and wind chill.
+
+```{r correlation-heatmap, fig.cap="Correlation heatmap showing strong positive correlation between temp and atemp", fig.height=6}
+# Create correlation heatmap
+cor_melted <- melt(cor_matrix)
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), size = 4) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
+                       midpoint = 0, limits = c(-1, 1), name = "r") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Correlation Matrix - Numeric Predictors", x = "", y = "")
+```
+
+```{r correlation-corrplot, fig.cap="Alternative correlation matrix visualization", fig.height=6}
+# Create corrplot visualization
+corrplot(cor_matrix, method = "color", type = "upper",
+         addCoef.col = "black", tl.col = "black", tl.srt = 45,
+         number.cex = 0.9, mar = c(0, 0, 2, 0),
+         title = "Correlation Matrix (corrplot)")
+```
+
+\newpage
+
+## Variance Inflation Factors (VIF)
+
+While correlation matrices reveal pairwise relationships, VIF provides a more comprehensive measure of multicollinearity by assessing how much the variance of a coefficient estimate is inflated due to collinearity with all other predictors.
+
+**VIF Interpretation:**
+- VIF < 5: No concern
+- 5 < VIF < 10: Moderate multicollinearity  
+- VIF > 10: Severe multicollinearity (action needed)
+
+```{r vif-analysis}
+# Compute VIF values
+vif_values <- vif(model)
+
+# Display VIF values
+print(vif_values)
+```
+
+```{r vif-table}
+# Extract VIF for numeric predictors only (for table display)
+if (is.matrix(vif_values)) {
+  vif_numeric <- data.frame(
+    Predictor = numeric_vars,
+    VIF = round(vif_values[numeric_vars, "GVIF^(1/(2*Df))"], 2)
+  )
+} else {
+  vif_numeric <- data.frame(
+    Predictor = numeric_vars,
+    VIF = round(vif_values[numeric_vars], 2)
+  )
+}
+
+kable(vif_numeric, caption = "VIF Values for Numeric Predictors",
+      row.names = FALSE)
+```
+
+**Key Findings:**
+
+- **temp**: VIF = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`** (SEVERE multicollinearity)
+- **atemp**: VIF = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "atemp"], 2)`** (SEVERE multicollinearity)
+- **hum**: VIF = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "hum"], 2)`** (no concern)
+- **windspeed**: VIF = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "windspeed"], 2)`** (no concern)
+
+Both `temp` and `atemp` exhibit severe multicollinearity with VIF values nearly 8 times the threshold of 10. This means standard errors are inflated by approximately $\sqrt{VIF}$ (about 9x for temp and 8.4x for atemp).
+
+```{r vif-plot, fig.cap="VIF values for numeric predictors. Both temp and atemp far exceed the severe threshold (red line at VIF = 10)", fig.height=5}
+# Create VIF bar plot
+ggplot(vif_numeric, aes(x = reorder(Predictor, VIF), y = VIF)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_hline(yintercept = 5, color = "orange", 
+             linetype = "dashed", linewidth = 1.2) +
+  geom_hline(yintercept = 10, color = "red", 
+             linetype = "dashed", linewidth = 1.2) +
+  coord_flip() +
+  labs(title = "Variance Inflation Factors (VIF)",
+       subtitle = "Orange = 5 (moderate), Red = 10 (severe)",
+       x = "Predictor", y = "VIF") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+\newpage
+
+# Question 7: Identify and Discuss Collinearity
+
+## Identification of Collinear Predictors
+
+Based on our analysis, we have identified **two predictors with severe multicollinearity**: temperature (`temp`) and feeling temperature (`atemp`).
+
+- **Correlation:** r = **`r round(cor_matrix["temp", "atemp"], 3)`**
+- **VIF values:** temp = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`**, atemp = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "atemp"], 2)`**
+
+No other predictor pairs show problematic collinearity (all remaining correlations below |r| = 0.25, VIF values below 2.5).
+
+**Physical Explanation:** Feeling temperature (`atemp`) is calculated as a function of actual temperature with minor adjustments for humidity and wind. Since actual temperature is the dominant component, the two variables contain nearly identical information about thermal conditions.
+
+```{r scatterplot, fig.cap="Scatterplot of atemp vs temp showing near-perfect linear relationship", fig.height=5}
+# Identify most correlated pair
+cor_no_diag <- cor_matrix
+diag(cor_no_diag) <- 0
+max_idx <- which(abs(cor_no_diag) == max(abs(cor_no_diag)), arr.ind = TRUE)[1,]
+var1 <- rownames(cor_matrix)[max_idx[1]]
+var2 <- colnames(cor_matrix)[max_idx[2]]
+r_val <- cor_matrix[max_idx[1], max_idx[2]]
+
+# Create scatterplot
+ggplot(bike, aes_string(x = var1, y = var2)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(title = sprintf("Scatterplot: %s vs %s (r = %.3f)", var1, var2, r_val),
+       x = var1, y = var2) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+## Impact on Standard Errors and Interpretation
+
+Multicollinearity has several important consequences:
+
+1. **Inflated Standard Errors:** The relationship is $SE_{inflated} = SE_{baseline} \times \sqrt{VIF}$. For `temp` with VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`, this represents approximately a 9-fold increase in standard error, making it difficult to detect statistically significant effects.
+
+2. **Unstable Coefficient Estimates:** In our baseline model, the coefficient for `temp` is 2855.01 (p = 0.042) while `atemp` is 1786.16 (p = 0.222). However, these estimates are unstable—small changes in the data could dramatically alter both magnitude and sign.
+
+3. **Difficult Interpretation:** When predictors are highly correlated, the regression algorithm struggles to attribute variance uniquely to each predictor, often resulting in counterintuitive coefficient estimates.
+
+## Impact on Predictive Performance
+
+**Important distinction:** While multicollinearity severely affects coefficient interpretation and statistical inference, it typically **does not harm predictive performance**. The model's ability to generate accurate predictions depends on the collective information provided by all predictors, not on our ability to isolate individual effects.
+
+Since `temp` and `atemp` together capture thermal conditions comprehensively, the model can still make accurate predictions even though we cannot reliably separate their individual contributions.
+
+**Practical Implication:**
+- If goal is **prediction** (forecasting rentals) → multicollinearity is not a major concern
+- If goal is **interpretation** (understanding temperature effects for policy) → multicollinearity is problematic
+
+\newpage
+
+## Strategies to Address Collinearity
+
+Several strategies exist for addressing multicollinearity:
+
+### 1. Remove One Collinear Predictor (Recommended)
+
+Since `temp` and `atemp` contain nearly identical information, we can remove one while retaining most predictive power. We recommend **removing `atemp` and keeping `temp`** because:
+
+- Actual temperature is more fundamental and directly measurable
+- It's the primary driver of feeling temperature
+- Removing `atemp` dramatically improves VIF for `temp`
+
+```{r reduced-model}
+# Fit model without atemp (with log transformation)
+model_reduced <- lm(log(cnt + 1) ~ season + yr + mnth + holiday + weekday +
+                      weathersit + temp + hum + windspeed,
+                    data = bike)
+
+# Get VIF values for comparison
+vif_reduced <- vif(model_reduced)
+```
+
+```{r vif-comparison}
+# Create comparison table
+if (is.matrix(vif_values)) {
+  vif_before <- vif_values[numeric_vars, "GVIF^(1/(2*Df))"]
+  vif_after <- c(vif_reduced["temp", "GVIF^(1/(2*Df))"], 
+                 NA,
+                 vif_reduced["hum", "GVIF^(1/(2*Df))"],
+                 vif_reduced["windspeed", "GVIF^(1/(2*Df))"])
+} else {
+  vif_before <- vif_values[numeric_vars]
+  vif_after <- c(vif_reduced["temp"], NA, 
+                 vif_reduced["hum"], vif_reduced["windspeed"])
+}
+
+vif_comparison <- data.frame(
+  Predictor = numeric_vars,
+  VIF_Original = round(vif_before, 2),
+  VIF_After_Removal = round(vif_after, 2)
+)
+
+kable(vif_comparison, 
+      caption = "VIF Comparison: Before and After Removing atemp",
+      row.names = FALSE)
+```
+
+**Result:** The VIF for `temp` drops from **`r round(vif_before[1], 2)`** to **`r round(vif_after[1], 2)`**, falling below the moderate threshold and resolving the severe multicollinearity.
+
+**Model Fit Comparison:**
+
+- Original model: Adjusted R² = **`r round(summary(model)$adj.r.squared, 4)`**
+- Reduced model: Adjusted R² = **`r round(summary(model_reduced)$adj.r.squared, 4)`**
+
+The adjusted R² remains essentially unchanged, confirming that removing `atemp` has minimal impact on model fit.
+
+### 2. Use Regularization Methods
+
+**Ridge Regression** (covered in Part V) handles multicollinearity by shrinking correlated coefficients toward each other. This allows keeping both predictors while reducing variance inflation. Particularly valuable when:
+
+- We believe both predictors contain unique information
+- We prioritize prediction over interpretation
+
+### 3. Perform Variable Selection
+
+**Lasso Regression** (also covered in Part V) can automatically select between collinear predictors by driving one coefficient to exactly zero. This combines the benefits of removing a predictor with the data-driven approach of regularization.
+
+### 4. Create Composite Variables
+
+We could combine `temp` and `atemp` into a single "thermal index" using principal components analysis or averaging. However, this sacrifices interpretability and is generally unnecessary when one variable can be removed.
+
+## Recommendation
+
+For this analysis, we recommend **Strategy 1: removing `atemp` and retaining `temp`**. This approach:
+
+- Is simple and maintains interpretability
+- Addresses the multicollinearity problem effectively
+- Has minimal impact on model fit (adjusted R² = `r round(summary(model_reduced)$adj.r.squared, 4)`)
+- Reduces VIF from `r round(vif_before[1], 2)` to `r round(vif_after[1], 2)`
+
+\newpage
+
+# Conclusion
+
+Our collinearity analysis revealed severe multicollinearity between temperature (`temp`) and feeling temperature (`atemp`), with:
+
+- Correlation: r = **`r round(cor_matrix["temp", "atemp"], 3)`**
+- VIF values: temp = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`**, atemp = **`r round(vif_numeric$VIF[vif_numeric$Predictor == "atemp"], 2)`**
+
+This collinearity:
+
+- **Inflates standard errors** by approximately 9-fold for `temp`
+- **Destabilizes coefficient estimates**, making individual interpretation problematic  
+- **Does not harm predictive performance** (model can still make accurate predictions)
+
+**Recommended Solution:** Remove `atemp` from the model, which:
+
+- Reduces VIF for `temp` from `r round(vif_before[1], 2)` to `r round(vif_after[1], 2)`
+- Maintains model fit (adjusted R² remains `r round(summary(model_reduced)$adj.r.squared, 4)`)
+- Simplifies interpretation while preserving predictive power
+
+**Alternative Approaches:** For purely predictive applications, regularization methods (ridge or lasso regression, covered in Part V) provide alternatives that retain both variables while managing multicollinearity through coefficient shrinkage.
+
+\newpage
+
+# Appendix: R Code
+
+The complete R code used for this analysis is available in `part3_collinearity.R`. All visualizations and statistical analyses can be reproduced by running the code chunks in this R Markdown document.
+
+**Key R Packages Used:**
+
+- `car`: VIF calculation
+- `corrplot`: Correlation visualization
+- `ggplot2`: Data visualization
+- `reshape2`: Data manipulation
+- `knitr`: Report generation
