@@ -1,0 +1,447 @@
+---
+title: "DATA 200BP: Homework #2"
+subtitle: "Linear Modeling, Selection, Validation, Ridge & Lasso"
+author: "Anish, Nisarga, Mishika, Svetya"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 2
+    number_sections: false
+    fig_caption: true
+geometry: margin=1in
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = 'center',
+  fig.width = 7,
+  fig.height = 5
+)
+
+# Load required libraries
+library(tidyverse)
+library(car)
+library(corrplot)
+library(reshape2)
+library(knitr)
+library(broom)
+```
+
+\newpage
+
+# Part I: Baseline Linear Model and Interpretation
+
+```{r load-data}
+# Load bike sharing data
+bike_data <- read.csv("~/Desktop/hw2/day.csv")
+
+# Convert categorical variables to factors with labels
+bike_data$season <- factor(bike_data$season, 
+                           levels = 1:4, 
+                           labels = c("Spring", "Summer", "Fall", "Winter"))
+
+bike_data$weathersit <- factor(bike_data$weathersit, 
+                               levels = 1:4, 
+                               labels = c("Clear", "Mist", "Light_Rain", "Heavy_Rain"))
+
+bike_data$yr <- factor(bike_data$yr, 
+                       levels = 0:1, 
+                       labels = c("2011", "2012"))
+
+bike_data$mnth <- as.factor(bike_data$mnth)
+bike_data$holiday <- as.factor(bike_data$holiday)
+bike_data$weekday <- as.factor(bike_data$weekday)
+```
+
+## Model Specification and Predictor Justification
+
+We fit an initial multiple linear regression model to predict daily bike rentals (`cnt`) using ten sensible predictors selected based on their theoretical relationship with bike rental demand.
+
+```{r fit-baseline-model}
+# Fit baseline model
+model1 <- lm(cnt ~ temp + atemp + hum + windspeed + season + weathersit + 
+             yr + mnth + holiday + weekday, data = bike_data)
+```
+
+### Predictor Justifications
+
+**Weather Variables** (temp, atemp, hum, windspeed): Temperature, humidity, and wind conditions directly impact cycling comfort and the desire to rent bikes. Higher temperatures generally encourage outdoor activity, while adverse weather conditions (high humidity, strong winds) deter ridership.
+
+**Calendar Patterns** (season, yr, mnth, weekday): These variables capture seasonal cycling behavior, system growth over time (2011 vs. 2012), monthly fluctuations, and weekday commuting patterns. Bike-sharing systems typically exhibit strong temporal patterns driven by both weather seasonality and human activity cycles.
+
+**Special Events** (holiday): Holidays may exhibit different rental patterns compared to regular days, as recreational usage may increase while commuter usage decreases.
+
+**Weather Situation** (weathersit): Beyond raw meteorological measurements, the categorical weather situation (clear, mist, rain) captures overall riding conditions and safety perceptions.
+
+### Exclusions
+
+We excluded `workingday` to avoid perfect collinearity with the combination of `weekday` and `holiday`. We also excluded `casual` and `registered` rentals as they sum to the target variable `cnt`, which would constitute data leakage.
+
+## Coefficient Estimates and Interpretation
+
+```{r coefficient-table}
+# Create coefficient summary table
+coef_summary <- summary(model1)$coefficients
+coef_df <- data.frame(
+  Variable = rownames(coef_summary),
+  Estimate = coef_summary[, "Estimate"],
+  Std_Error = coef_summary[, "Std. Error"],
+  t_value = coef_summary[, "t value"],
+  p_value = coef_summary[, "Pr(>|t|)"]
+)
+
+# Add significance stars
+coef_df$Significance <- ifelse(coef_df$p_value < 0.001, "***",
+                               ifelse(coef_df$p_value < 0.01, "**",
+                                     ifelse(coef_df$p_value < 0.05, "*",
+                                           ifelse(coef_df$p_value < 0.1, ".", ""))))
+
+kable(coef_df, 
+      digits = 3,
+      caption = "Baseline Multiple Linear Regression Model Results",
+      col.names = c("Variable", "Coefficient", "Std. Error", "t-value", "p-value", "Sig."),
+      row.names = FALSE)
+```
+
+### Interpretation of Key Coefficients
+
+**Temperature** ($\beta$ $\approx$ 4,008): Holding all other variables constant, a 1-unit increase in normalized temperature is associated with an average increase of approximately 4,008 daily bike rentals. This is the strongest predictor in the model, indicating that cycling demand is highly temperature-sensitive.
+
+**Season - Winter** ($\beta$ $\approx$ 1,652): Compared to the baseline season (Spring), Winter is associated with an increase of approximately 1,652 daily rentals, controlling for other factors including temperature. This counterintuitive result may reflect that the dataset's "Winter" months include pleasant late-year riding conditions compared to volatile early Spring weather.
+
+**Year 2012** ($\beta$ $\approx$ 2,018): The year 2012 saw an average of approximately 2,018 more daily rentals than 2011, holding weather and seasonal factors constant. This reflects the bike-sharing system's growing popularity and expansion.
+
+**Light Rain** ($\beta$ $\approx$ -1,939): Light rain conditions reduce daily rentals by approximately 1,939 compared to clear weather, holding all else constant. This substantial negative effect demonstrates the strong deterrent impact of precipitation on cycling behavior.
+
+**Humidity** ($\beta$ $\approx$ -1,216): Higher humidity is associated with less favorable cycling comfort, resulting in an estimated 1,216 fewer daily rentals per unit increase in normalized humidity, all else equal.
+
+## Statistical Significance vs. Practical Relevance
+
+All predictors in the model are statistically significant at conventional levels (p < 0.05), though their practical importance varies substantially.
+
+**High Statistical and Practical Significance:** Temperature ($\beta$ = 4,008) and year ($\beta$ = 2,018) exhibit both strong statistical significance (p < 0.001) and large effect sizes, making them the most important predictors for understanding rental variation.
+
+**Moderate Practical Impact:** Light rain ($\beta$ = -1,939) and humidity ($\beta$ = -1,216) show statistically significant effects with moderate practical importance, representing meaningful but secondary influences on rental behavior.
+
+**Limited Practical Relevance:** While month ($\beta$ $\approx$ -16) achieves statistical significance, its small coefficient suggests minimal practical impact on daily rental counts. Similarly, weekday ($\beta$ $\approx$ 68) shows statistical significance but represents only modest day-to-day variation in rental patterns, likely overshadowed by seasonal and weather effects.
+
+This distinction highlights that statistical significance (rejecting the null hypothesis that $\beta$ = 0) does not automatically imply practical importance. In a large dataset like this one (n = 731), even trivial effects can achieve statistical significance.
+
+\newpage
+
+# Part II: Transformations and Diagnostics
+
+## Assessment of Linear Model Assumptions
+
+The validity of the baseline OLS model was evaluated using standard diagnostic plots to check key linear regression assumptions.
+
+```{r diagnostic-plots-baseline, fig.height=8, fig.width=7, fig.cap="Diagnostic plots for baseline model showing violations of assumptions"}
+par(mfrow = c(3, 2))
+
+plot(model1, which = 1, main = "Residuals vs Fitted Values")
+plot(model1, which = 2, main = "Normal Q-Q Plot of Residuals")
+plot(model1, which = 3, main = "Scale-Location (Constant Variance)")
+plot(model1, which = 4, main = "Cook's Distance")
+
+# Residuals vs key predictor
+plot(bike_data$temp, residuals(model1),
+     xlab = "Temperature", ylab = "Residuals",
+     main = "Residuals vs Temperature")
+abline(h = 0, col = "red", lty = 2)
+```
+
+### Identified Violations
+
+**Heteroscedasticity (Non-Constant Variance):** The residuals vs. fitted plot and scale-location plot both display a clear fan-shaped pattern where the spread of residuals increases with predicted values. This violates the assumption of homoscedasticity and is common in count data where higher counts typically exhibit higher variance.
+
+**Non-Normality:** The Normal Q-Q plot shows deviations from the theoretical diagonal line, particularly in the tails, suggesting non-normally distributed residuals. However, given the moderately large sample size (n = 731), this violation is less critical due to the Central Limit Theorem.
+
+**Non-Linearity:** The residuals vs. fitted plot shows some curvature rather than random scatter around zero, indicating potential non-linear relationships not captured by the linear specification.
+
+## Transformation Strategy
+
+To address heteroscedasticity and improve model diagnostics, we applied a **log transformation** to the response variable: log(cnt).
+
+**Rationale:** Log transformations are standard practice for count data to stabilize variance and linearize exponential growth trends. This transformation is particularly appropriate when the variance of the response increases proportionally with its mean.
+
+```{r fit-log-model}
+# Fit log-transformed model
+model2 <- lm(log(cnt) ~ temp + atemp + hum + windspeed + season + weathersit + 
+             yr + mnth + holiday + weekday, data = bike_data)
+```
+
+```{r diagnostic-plots-log, fig.height=6, fig.width=7, fig.cap="Diagnostic plots for log-transformed model showing improved fit"}
+par(mfrow = c(2, 2))
+plot(model2, which = 1:4)
+```
+
+### Improved Diagnostics
+
+**Variance Stabilization:** The scale-location plot shows a significantly flatter trend line, indicating successful stabilization of residual variance across the range of fitted values.
+
+**Improved Normality:** The Q-Q plot shows residuals hugging the theoretical line more closely in central quantiles, though some deviation remains in extreme tails.
+
+**Reduced Non-Linearity:** The residuals vs. fitted plot shows more random scatter with reduced systematic patterns.
+
+## Model Comparison
+
+```{r model-comparison-metrics}
+# Calculate comparison metrics
+baseline_r2 <- summary(model1)$r.squared
+baseline_adj_r2 <- summary(model1)$adj.r.squared
+log_r2 <- summary(model2)$r.squared
+log_adj_r2 <- summary(model2)$adj.r.squared
+
+comparison <- data.frame(
+  Model = c("Baseline (OLS)", "Log-Transformed"),
+  R_squared = c(baseline_r2, log_r2),
+  Adj_R_squared = c(baseline_adj_r2, log_adj_r2)
+)
+
+kable(comparison, 
+      digits = 4,
+      col.names = c("Model", "$R^2$", "Adjusted $R^2$"),
+      caption = "Performance Comparison: Baseline vs. Log-Transformed Model",
+      row.names = FALSE)
+```
+
+### Discussion
+
+**Diagnostic Improvement:** The log transformation successfully corrects the heteroscedasticity violation, resulting in a model that better satisfies OLS assumptions. This improves the validity of statistical inference (confidence intervals, hypothesis tests).
+
+**Slight Performance Trade-off:** The adjusted $R^2$ decreases slightly from `r round(baseline_adj_r2, 4)` to `r round(log_adj_r2, 4)`. This modest reduction suggests that while the log transformation improves theoretical assumptions, the baseline linear relationship may capture the data generation process slightly better in terms of raw fit.
+
+**Interpretation Change:** The transformation fundamentally alters coefficient interpretation. In the baseline model, coefficients represent absolute changes in rental counts. In the log-transformed model, coefficients represent **percentage changes**. For example, the temperature coefficient now indicates that a 1-unit increase in normalized temperature is associated with an approximate multiplicative change in ridership (exp($\beta$) - 1), rather than an additive increase.
+
+**Recommendation:** We proceed with the **log-transformed model** (model2) as the preferred specification for subsequent analyses, as it satisfies regression assumptions more appropriately and provides a theoretically sound foundation for inference, despite the marginal decrease in $R^2$.
+
+\newpage
+
+# Part III: Collinearity Analysis
+
+## Model Specification for Collinearity Analysis
+
+Following the transformation analysis in Part II, we use the log-transformed model as our baseline for collinearity evaluation:
+
+**Model:** log(cnt) ~ season + yr + mnth + holiday + weekday + weathersit + temp + atemp + hum + windspeed
+
+Note: We exclude `workingday` to avoid aliasing with the combination of `weekday` and `holiday`.
+
+```{r setup-part3, include=FALSE}
+# Fit baseline model for Part III (log-transformed)
+model3 <- lm(log(cnt) ~ season + yr + mnth + holiday + weekday +
+              weathersit + temp + atemp + hum + windspeed,
+            data = bike_data)
+
+# Define numeric predictors for collinearity analysis
+numeric_vars <- c("temp", "atemp", "hum", "windspeed")
+
+# Compute correlation matrix
+cor_matrix <- cor(bike_data[, numeric_vars])
+
+# Compute VIF
+vif_values <- vif(model3)
+```
+
+## Question 6: Evaluate Collinearity
+
+### 6.1 Correlation Matrix
+
+We computed the correlation matrix for all numeric predictors in our log-transformed baseline model: temperature (temp), feeling temperature (atemp), humidity (hum), and wind speed (windspeed).
+
+```{r correlation-table}
+kable(round(cor_matrix, 3), 
+      caption = "Correlation Matrix for Numeric Predictors",
+      align = 'c',
+      row.names = FALSE)
+```
+
+**Note:** The correlation matrix values are identical for both log-transformed and non-transformed models, as correlation is invariant to monotonic transformations of the response variable.
+
+The correlation matrix reveals one critically important finding: temperature (temp) and feeling temperature (atemp) exhibit an extremely strong positive correlation of r = **`r round(cor_matrix["temp", "atemp"], 3)`**. This near-perfect correlation is expected, as feeling temperature is primarily determined by actual temperature, with minor adjustments for humidity and wind chill. All other pairwise correlations are weak to moderate (|r| < 0.25), indicating no additional collinearity concerns.
+
+```{r correlation-heatmap, fig.cap="Figure 1: Correlation heatmap showing strong positive correlation (red) between temp and atemp", fig.height=5}
+cor_melted <- melt(cor_matrix)
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), size = 4) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",
+                       midpoint = 0, limits = c(-1, 1), name = "Correlation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(hjust = 0.5, face = "bold")) +
+  labs(title = "Correlation Heatmap of Numeric Predictors", x = "", y = "")
+```
+
+```{r correlation-matrix-plot, fig.cap="Figure 2: Correlation matrix of numeric predictors showing triangular layout", fig.height=5.5, fig.width=5.5}
+# Create the triangular correlation matrix plot
+corrplot(cor_matrix, method = "color", type = "upper",
+         addCoef.col = "black", tl.col = "black", tl.srt = 45,
+         number.cex = 0.9, 
+         title = "Correlation Matrix of Numeric Predictors",
+         mar = c(0, 0, 2, 0),
+         col = colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
+                                   "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
+                                   "#4393C3", "#2166AC", "#053061"))(200))
+```
+
+### 6.2 Variance Inflation Factors (VIF)
+
+While correlation matrices reveal pairwise relationships, VIF provides a more comprehensive measure of multicollinearity by assessing how much the variance of a coefficient estimate is inflated due to collinearity with all other predictors.
+
+**VIF Interpretation:**
+- VIF < 5: No concern
+- 5 < VIF < 10: Moderate multicollinearity  
+- VIF > 10: Severe multicollinearity (action needed)
+
+```{r vif-table}
+# Extract VIF for numeric predictors
+if (is.matrix(vif_values)) {
+  vif_numeric <- data.frame(
+    Predictor = numeric_vars,
+    VIF = round(vif_values[numeric_vars, "GVIF^(1/(2*Df))"], 2)
+  )
+} else {
+  vif_numeric <- data.frame(
+    Predictor = numeric_vars,
+    VIF = round(vif_values[numeric_vars], 2)
+  )
+}
+
+kable(vif_numeric, 
+      caption = "VIF Values for Numeric Predictors",
+      row.names = FALSE,
+      align = 'c')
+```
+
+The VIF analysis confirms and quantifies the collinearity problem identified in the correlation matrix. Both temp (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`) and atemp (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "atemp"], 2)`) exhibit severe multicollinearity, with VIF values far exceeding the threshold of 10. This means the standard errors of these coefficient estimates are inflated by a factor of approximately $\sqrt{VIF}$ $\approx$ 9 for temp and $\approx$ 8.4 for atemp. In contrast, humidity (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "hum"], 2)`) and windspeed (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "windspeed"], 2)`) show no multicollinearity concerns.
+
+```{r vif-plot, fig.cap="Figure 3: VIF values for numeric predictors. Both temp and atemp far exceed the severe threshold (red line at VIF = 10)", fig.height=5}
+ggplot(vif_numeric, aes(x = reorder(Predictor, VIF), y = VIF)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_hline(yintercept = 5, color = "orange", 
+             linetype = "dashed", linewidth = 1.2) +
+  geom_hline(yintercept = 10, color = "red", 
+             linetype = "dashed", linewidth = 1.2) +
+  coord_flip() +
+  labs(title = "Variance Inflation Factors (VIF)",
+       subtitle = "Orange = 5 (moderate), Red = 10 (severe)",
+       x = "Predictor", y = "VIF") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+\newpage
+
+## Question 7: Identify and Discuss Collinearity
+
+### 7.1 Identification of Collinear Predictors
+
+Based on our analysis of the log-transformed model, we have identified **two predictors with severe multicollinearity**: temperature (temp) and feeling temperature (atemp). These variables exhibit a correlation of r = **`r round(cor_matrix["temp", "atemp"], 3)`** and VIF values of `r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)` and `r round(vif_numeric$VIF[vif_numeric$Predictor == "atemp"], 2)` respectively. No other predictor pairs show problematic collinearity.
+
+**Physical Explanation:** Feeling temperature (atemp) is calculated as a function of actual temperature with minor adjustments for humidity and wind chill. Since actual temperature is the dominant component in this calculation, the two variables contain nearly identical information about thermal conditions.
+
+```{r scatterplot, fig.cap="Figure 4: Scatterplot of atemp vs temp showing near-perfect linear relationship", fig.height=5}
+ggplot(bike_data, aes(x = atemp, y = temp)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  geom_smooth(method = "lm", color = "red", se = TRUE) +
+  labs(title = sprintf("Scatterplot: atemp vs temp (r = %.3f)", 
+                       cor_matrix["temp", "atemp"]),
+       x = "Feeling Temperature (atemp)", 
+       y = "Actual Temperature (temp)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+### 7.2 Impact on Standard Errors and Interpretation
+
+Multicollinearity has several important consequences for our log-transformed model:
+
+**1. Inflated Standard Errors:** The relationship between VIF and standard error inflation is given by: $SE_{inflated} = SE_{baseline} \times \sqrt{VIF}$. For temp with VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`, this represents approximately a 9-fold increase in standard error. This inflation makes it difficult to detect statistically significant effects and leads to wider confidence intervals, reducing our precision in estimating the true effect of temperature.
+
+**2. Unstable Coefficient Estimates:** When predictors are highly collinear, small changes in the data can lead to large swings in coefficient estimates. The regression algorithm cannot reliably distinguish which variable is responsible for variance in bike rentals, leading to unstable and unreliable parameter estimates. This instability makes individual coefficient interpretation problematic.
+
+**3. Difficult Interpretation:** With severe collinearity, we cannot confidently attribute the effect on bike rentals to either temp or atemp specifically, as the model struggles to separate their individual contributions. This undermines our ability to make causal or mechanistic interpretations.
+
+### 7.3 Impact on Predictive Performance
+
+**Important distinction:** While multicollinearity severely affects coefficient interpretation and statistical inference, it typically **does not harm predictive performance**. 
+
+The model's ability to generate accurate predictions depends on the collective information provided by all predictors, not on our ability to isolate individual effects. Since temp and atemp together capture thermal conditions comprehensively, the log-transformed model can still make accurate predictions of bike rental counts even though we cannot reliably separate their individual contributions.
+
+**Practical Implication:** If our primary goal is **prediction** (forecasting future bike rentals), multicollinearity is not a major concern. The model's predictive accuracy (measured by $R^2$, RMSE, etc.) remains unaffected. However, if we need to **interpret** or **explain** the specific effect of temperature on rentals for policy or operational decisions, then multicollinearity poses a serious problem.
+
+### 7.4 Strategies to Address Collinearity
+
+Several strategies exist for addressing multicollinearity in the log-transformed model:
+
+**1. Remove One Collinear Predictor (Recommended):** Since temp and atemp contain nearly identical information, we can remove one while retaining most predictive power. We recommend **removing atemp and keeping temp**, as actual temperature is more fundamental, directly measurable, and scientifically interpretable.
+
+```{r reduced-model, include=FALSE}
+# Fit model without atemp
+model_reduced <- lm(log(cnt) ~ season + yr + mnth + holiday + weekday +
+                      weathersit + temp + hum + windspeed,
+                    data = bike_data)
+
+# Get VIF values
+vif_reduced <- vif(model_reduced)
+
+# Create comparison data
+if (is.matrix(vif_values)) {
+  vif_before <- vif_values[numeric_vars, "GVIF^(1/(2*Df))"]
+  vif_after <- c(vif_reduced["temp", "GVIF^(1/(2*Df))"], 
+                 NA,
+                 vif_reduced["hum", "GVIF^(1/(2*Df))"],
+                 vif_reduced["windspeed", "GVIF^(1/(2*Df))"])
+} else {
+  vif_before <- vif_values[numeric_vars]
+  vif_after <- c(vif_reduced["temp"], NA, 
+                 vif_reduced["hum"], vif_reduced["windspeed"])
+}
+
+vif_comparison <- data.frame(
+  Predictor = numeric_vars,
+  VIF_Original = round(vif_before, 2),
+  VIF_After_Removal = ifelse(is.na(vif_after), "—", round(vif_after, 2))
+)
+```
+
+```{r vif-comparison-table}
+kable(vif_comparison, 
+      caption = "VIF Comparison: Before and After Removing atemp",
+      row.names = FALSE,
+      col.names = c("Predictor", "VIF (Original)", "VIF (After Removing atemp)"),
+      align = 'c')
+```
+
+**Key Finding:** After removing atemp, the VIF for temp drops dramatically from `r round(vif_before[1], 2)` to `r round(vif_after[1], 2)`, falling well below the moderate threshold of 10. The model's adjusted $R^2$ remains essentially unchanged at `r round(summary(model_reduced)$adj.r.squared, 4)` (compared to `r round(summary(model3)$adj.r.squared, 4)` in the full model), confirming that removing atemp has minimal impact on model fit while resolving the severe multicollinearity.
+
+**2. Use Regularization Methods:** Ridge regression (covered in Part V) handles multicollinearity by shrinking correlated coefficients toward each other through L2 penalization. This approach allows us to keep both predictors while reducing variance inflation, though at the cost of introducing some bias.
+
+**3. Perform Variable Selection:** Lasso regression (also in Part V) can automatically select between collinear predictors by driving one coefficient to exactly zero through L1 penalization. This combines the benefits of variable removal with a data-driven, automated approach.
+
+**4. Create Composite Variables:** We could combine temp and atemp into a single "thermal comfort index" using techniques like principal components analysis (PCA). However, this sacrifices interpretability and is generally unnecessary when simple variable removal suffices.
+
+### Recommendation
+
+For this analysis, we recommend **Strategy 1: removing atemp and retaining temp**. This approach is simple, maintains interpretability, addresses the multicollinearity problem effectively, and has minimal impact on model fit.
+
+\newpage
+
+# Conclusion
+
+This comprehensive analysis of the bike sharing dataset demonstrates the application of fundamental linear modeling techniques and diagnostic procedures. 
+
+**Part I** established a sensible baseline model with strong predictive power (adjusted $R^2$ $\approx$ 0.33), identifying temperature, humidity, seasonal patterns, and system growth as primary drivers of bike rental demand.
+
+**Part II** revealed violations of OLS assumptions, particularly heteroscedasticity, which were successfully addressed through log transformation of the response variable. While this transformation slightly reduced raw predictive performance, it improved diagnostic compliance and provides a more theoretically sound basis for statistical inference.
+
+**Part III** identified severe multicollinearity between temperature and feeling temperature (r = 0.992, VIF > 70), demonstrating how collinearity inflates standard errors and destabilizes coefficient estimates without harming predictive accuracy. The recommended mitigation—removing atemp—successfully reduces VIF to acceptable levels while maintaining model performance.
+
+The log-transformed model with atemp removed serves as our preferred specification, balancing theoretical validity, interpretability, and predictive performance for subsequent model selection and regularization analyses in Parts IV and V.
