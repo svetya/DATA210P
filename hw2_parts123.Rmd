@@ -43,6 +43,8 @@ library(glmnet) # ridge/lasso
 # ------------------------------------ Part 1 ----------------------------------
 # ------ Baseline Linear Model and Interpretations ------
 
+In this section, we fit an initial multiple linear regression model for daily bike rentals (`cnt`) using a subject-matter–motivated subset of weather and calendar predictors. We then report coefficient estimates and interpret key effects, highlighting the difference between statistical significance and practical relevance.
+
 ```{r load-data}
 # Load data (use repo-relative path for reproducibility)
 bike_data <- read.csv("day.csv")

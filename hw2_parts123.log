@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2026.1.14)  4 FEB 2026 09:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2026.1.14)  4 FEB 2026 11:52
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -489,14 +489,18 @@ LaTeX Font Info:    External font `lmex10' loaded for size
 \openout3 = `hw2_parts123.toc'.
 
 [2{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathit.enc}]
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 107.
+(c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/t1lmtt.fd
+File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
+)
 
-LaTeX Warning: Float too large for page by 702.25233pt on input line 217.
+LaTeX Warning: Float too large for page by 702.25233pt on input line 219.
 
 [3] [4{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-rm.enc}{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathsy.enc}] [5]
-<hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf, id=88, 469.755pt x 722.7pt>
+<hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf, id=89, 469.755pt x 722.7pt>
 File: hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf  used on input line 317.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf  used on input line 319.
 (pdftex.def)             Requested size: 469.75386pt x 722.69823pt.
 [6]
 Overfull \vbox (72.26822pt too high) has occurred while \output is active []
@@ -504,72 +508,68 @@ Overfull \vbox (72.26822pt too high) has occurred while \output is active []
 [7 <./hw2_parts123_files/figure-latex/diagnostic-plots-baseline-1.pdf>]
 
 Package caption Warning: The option `hypcap=true' will be ignored for this
-(caption)                particular \caption on input line 320.
+(caption)                particular \caption on input line 322.
 See the caption package documentation for explanation.
 
-<hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf, id=104, 469.755pt x 433.62pt>
+<hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf, id=105, 469.755pt x 433.62pt>
 File: hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf  used on input line 356.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf  used on input line 358.
 (pdftex.def)             Requested size: 469.75386pt x 433.61894pt.
 ignored error: Infinite glue shrinkage found in box being split [8] [9] [10 <./hw2_parts123_files/figure-latex/diagnostic-plots-log-1.pdf>]
-<hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf, id=125, 469.755pt x 361.35pt>
+<hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf, id=126, 469.755pt x 361.35pt>
 File: hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf  used on input line 475.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf  used on input line 477.
 (pdftex.def)             Requested size: 469.75386pt x 361.34912pt.
-<hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf, id=126, 397.485pt x 397.485pt>
+<hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf, id=127, 397.485pt x 397.485pt>
 File: hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf  used on input line 484.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf  used on input line 486.
 (pdftex.def)             Requested size: 446.26582pt x 446.27794pt.
 ignored error: Infinite glue shrinkage found in box being split [11]
-<hw2_parts123_files/figure-latex/vif-plot-1.pdf, id=134, 469.755pt x 361.35pt>
+<hw2_parts123_files/figure-latex/vif-plot-1.pdf, id=135, 469.755pt x 361.35pt>
 File: hw2_parts123_files/figure-latex/vif-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/vif-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/vif-plot-1.pdf  used on input line 532.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/vif-plot-1.pdf  used on input line 534.
 (pdftex.def)             Requested size: 469.75386pt x 361.34912pt.
 [12] [13 <./hw2_parts123_files/figure-latex/correlation-heatmap-1.pdf>] [14 <./hw2_parts123_files/figure-latex/correlation-matrix-plot-1.pdf>] [15 <./hw2_parts123_files/figure-latex/vif-plot-1.pdf>]
-<hw2_parts123_files/figure-latex/scatterplot-1.pdf, id=175, 469.755pt x 361.35pt>
+<hw2_parts123_files/figure-latex/scatterplot-1.pdf, id=176, 469.755pt x 361.35pt>
 File: hw2_parts123_files/figure-latex/scatterplot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/scatterplot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/scatterplot-1.pdf  used on input line 561.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/scatterplot-1.pdf  used on input line 563.
 (pdftex.def)             Requested size: 469.75386pt x 361.34912pt.
 [16 <./hw2_parts123_files/figure-latex/scatterplot-1.pdf>] [17] [18]
-<hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf, id=207, 469.755pt x 332.24126pt>
+<hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf, id=208, 469.755pt x 332.24126pt>
 File: hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf  used on input line 778.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf  used on input line 780.
 (pdftex.def)             Requested size: 469.75386pt x 332.24043pt.
 [19{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}] [20 <./hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf>]
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 825.
-(c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/t1lmtt.fd
-File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-)
-<hw2_parts123_files/figure-latex/adjr2-plot-1.pdf, id=232, 469.755pt x 317.185pt>
+<hw2_parts123_files/figure-latex/adjr2-plot-1.pdf, id=233, 469.755pt x 317.185pt>
 File: hw2_parts123_files/figure-latex/adjr2-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/adjr2-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/adjr2-plot-1.pdf  used on input line 902.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/adjr2-plot-1.pdf  used on input line 904.
 (pdftex.def)             Requested size: 469.75386pt x 317.1842pt.
 ignored error: Infinite glue shrinkage found in box being split [21]
 <hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf, id=244, 469.755pt x 346.29375pt>
 File: hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf  used on input line 936.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf  used on input line 938.
 (pdftex.def)             Requested size: 469.75386pt x 346.2929pt.
 <hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf, id=245, 469.755pt x 317.185pt>
 File: hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf  used on input line 945.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf  used on input line 947.
 (pdftex.def)             Requested size: 469.75386pt x 317.1842pt.
 [22] [23 <./hw2_parts123_files/figure-latex/adjr2-plot-1.pdf>] [24 <./hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf>] [25 <./hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf>]
 <hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf, id=286, 578.16pt x 303.1325pt>
 File: hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf  used on input line 983.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf  used on input line 985.
 (pdftex.def)             Requested size: 460.35791pt x 241.36847pt.
 [26 <./hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf>]
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1095.
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1097.
 (c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [27{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}] [28] (./hw2_parts123.aux)
@@ -587,7 +587,7 @@ Here is how much of TeX's memory you used:
  14 hyphenation exceptions out of 8191
  89i,16n,93p,904b,620s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmex10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi12.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi8.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on hw2_parts123.pdf (28 pages, 756233 bytes).
+Output written on hw2_parts123.pdf (28 pages, 756128 bytes).
 PDF statistics:
  484 PDF objects out of 1000 (max. 8388607)
  395 compressed objects within 4 object streams
