@@ -1,0 +1,91 @@
+---
+title: "HW2"
+author: "Anish, Nisarga, Mishika, Svetya"
+date: "2026-01-28"
+output: pdf_document
+---
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(tidyverse)
+library(car)
+library(stargazer)
+```
+## ----------------------------------------------- Part 1 ----------------------------------------------
+```{r load data}
+bike_data <- read.csv("/Users/svetyak/Documents/UCI/data210p/bike+sharing+dataset/data/day.csv")
+bike_data$season <- factor(bike_data$season, levels = 1:4, labels = c("Spring","Summer", "Fall", "Winter"))
+
+bike_data$weathersit <- factor(bike_data$weathersit, levels = 1:4, labels = c("Clear","Mist", "Light_Rain", "Heavy_Rain"))
+
+bike_data$yr <- factor(bike_data$yr, levels = 0:1, labels = c("2011","2012"))
+```
+
+```{r fit model}
+model1 = lm(cnt ~ temp + atemp + hum + windspeed + season + weathersit + yr + mnth + holiday + weekday, data = bike_data)
+```
+
+```{r results='asis'}
+stargazer(model1, type = "text",
+          title = "Baseline Multiple Linear Model Results",
+          align = TRUE)
+```
+
+## ---------------------------------- Predictor Justifications ----------------------------------
+
+We selected ten predictors based on their appropriate correlation with bike rentals demand. 
+
+**Weather** (temp, atemp, hum, windspeed): Temperature, humidity, and wind conditions all have a direct impact on cycling comfortability and desire to rent bikes.
+
+**Calendar Patterns** (season, yr, mnth, weekday): Documents seasonal cycling behavior, bike-sharing system growth over time, monthly fluctuations, and weekday commuting habits
+
+**Seasonal Festivities** (holiday): Indicates holidays that may have different rental patterns than regular days.
+
+**Weather Situation** (weathersit): Rain and mist have a direct impact on bike riding circumstances and safety.
+
+## ---------------------------------- Coefficient Interpertations ---------------------------------
+
+temp (4,008): Higher temperatures lead to significantly more people renting bikes, approximately 4,000 additional rentals per temperature unit increase
+seasonWinter (1,652): Compared to Spring (reference), Winter has 1,652 more daily rentals on average, controlling for other factors.
+yr2012 (2,018): 2012 had approximately 2,018 more daily rentals than 2011, indicating system growth.
+weathersitLight_Rain (-1,939): Light rain conditions reduce daily rentals by 1,939 compared to clear weather, holding all else constant.
+hum (-1,216): Higher humidity is linked to less favorable cycling comfort, resulting in an estimated 1,216 fewer daily rentals per unit increase in normalized humidity.
+
+## ----------------- Statistical Significance from Practical Relevance -------------------
+
+All predictors are statistically significant, although their practical value varies. Temperature (beta=4,008) and year (beta=2,018) have the strongest effects on rental changes. Light rain (beta=-1,939) and humidity (beta=-1,216) also have a significant impact. Although month (beta=-16) is statistically significant, its slight coefficient indicates little practical impact. Similarly, weekday (beta=68) indicates statistical significance but represents just somewhat daily variation in rental patterns.
+
+## ----------------- Part II. Transformations and Diagnostics -------------------
+```{r diagonstic plots, fig.height=10, fig.width=8}
+par(mfrow = c(3,2))
+
+plot(model1, which = 1, main = "Residuals vs Fitted Values")
+
+plot(model1, which = 2, main = "normal Q–Q plot of residuals")
+
+plot(model1, which = 3, main = "Assessment of Constant Variance")
+
+plot(model1, which = 4, main = "Cook’s distance")
+
+plot(bike_data$temp, residuals(model1),
+     xlab = "Temperature", ylab = "Residuals",
+     main = "Residuals vs Key Predictor (Temperature)")
+abline(h = 0, col = "green", lty = 2)
+
+```
+
+The diagnostic plots show a fan-shaped pattern in residuals vs fitted and right-skewed residuals. The response variable 'cnt' has a large range, implying that a log transformation could stabilize variance and improve normality.
+
+```{r transform model}
+model2 <- lm(log(cnt) ~ temp + atemp + hum + windspeed + season + weathersit + yr + mnth + holiday + weekday, data = bike_data)
+
+par(mfrow = c(2, 2))
+plot(model2, which = 1:4)
+```
+
+```{r model comparison}
+summary(model1)$r.squared
+summary(model1)$adj.r.squared
+summary(model2)$r.squared
+summary(model2)$adj.r.squared
+```
+The log-transformed model provides better diagnostics with a more consistent variance. However, the interpretation has changed: coefficients are now represented as percentage changes in rentals rather than absolute changes. For example, a unit increase in the temperature now has a nonlinear effect on rentals rather than simply adding 4,008 motorcycles.
