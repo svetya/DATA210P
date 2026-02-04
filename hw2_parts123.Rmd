@@ -1,7 +1,7 @@
----
-title: "DATA 200BP: Homework #2"
+﻿---
+title: "DATA 210P: Homework #2"
 subtitle: "Linear Modeling, Selection, Validation, Ridge & Lasso"
-author: "Anish, Nisarga, Mishika, Svetya"
+author: "Anishwar, Nisarga, Mishika, Svetya"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
@@ -9,6 +9,9 @@ output:
     toc_depth: 2
     number_sections: false
     fig_caption: true
+header-includes:
+  - \usepackage{dcolumn}
+  - \usepackage{caption}
 geometry: margin=1in
 fontsize: 11pt
 ---
@@ -19,7 +22,7 @@ knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
   fig.align = 'center',
-  fig.width = 7,
+  fig.width = 6.5,
   fig.height = 5
 )
 
@@ -31,6 +34,9 @@ library(reshape2)
 library(knitr)
 library(broom)
 library(stargazer)
+library(MASS)   # for stepwise selection (AIC) via step()
+library(scales) # for percent_format()
+library(glmnet) # ridge/lasso
 ```
 \newpage
 
@@ -38,13 +44,23 @@ library(stargazer)
 # ------ Baseline Linear Model and Interpretations ------
 
 ```{r load-data}
-bike_data <- read.csv("/Users/svetyak/Documents/UCI/data210p/bike+sharing+dataset/data/day.csv")
+# Load data (use repo-relative path for reproducibility)
+bike_data <- read.csv("day.csv")
 
 bike_data$season <- factor(bike_data$season, levels = 1:4, labels = c("Spring","Summer", "Fall", "Winter"))
 
 bike_data$weathersit <- factor(bike_data$weathersit, levels = 1:4, labels = c("Clear","Mist", "Light_Rain", "Heavy_Rain"))
 
 bike_data$yr <- factor(bike_data$yr, levels = 0:1, labels = c("2011","2012"))
+
+# Treat binary indicator as categorical for modeling
+bike_data$holiday <- factor(bike_data$holiday, levels = c(0, 1), labels = c("No", "Yes"))
+
+# Treat coded calendar variables as categorical, not continuous
+bike_data$mnth <- factor(bike_data$mnth, levels = 1:12,
+                        labels = month.abb)
+bike_data$weekday <- factor(bike_data$weekday, levels = 0:6,
+                           labels = c("Sun","Mon","Tue","Wed","Thu","Fri","Sat"))
 ```
 
 ```{r fit model}
@@ -52,7 +68,7 @@ model1 = lm(cnt ~ temp + atemp + hum + windspeed + season + weathersit + yr + mn
 ```
 
 ```{r results='asis'}
-stargazer(model1, type = "text",
+stargazer(model1, type = "latex",
           title = "Baseline Multiple Linear Model Results",
           align = TRUE)
 ```
@@ -72,18 +88,20 @@ We selected ten predictors based on their appropriate correlation with bike rent
 
 # ----------------------- Coefficient Interpretations -----------------------
 
-temp (4,008): Higher temperatures lead to significantly more people renting bikes, approximately 4,000 additional rentals per temperature unit increase. This is the strongest predictor in the model, indicating that cycling demand is highly temperature-sensitive.
+temp (4,008): In this dataset, temperature is normalized to the range [0, 1]. A 1-unit increase corresponds to moving from the minimum to the maximum observed temperature. The model estimates about 4,000 additional daily rentals for a full 1-unit increase in normalized temperature (about 400 additional rentals for a 0.1 increase), holding other variables constant. This is the strongest predictor in the model, indicating that cycling demand is highly temperature-sensitive.
 
 seasonWinter (1,652): Compared to the baseline season (Spring), Winter is associated with an increase of approximately 1,652 daily rentals, controlling for other factors including temperature. This counterintuitive result may reflect that the dataset's "Winter" months include pleasant late-year riding conditions compared to volatile early Spring weather.
 
 yr2012 (2,018): The year 2012 saw an average of approximately 2,018 more daily rentals than 2011, holding weather and seasonal factors constant. This reflects the bike-sharing system's growing popularity and expansion.
 
-hum (-1,216): Higher humidity is linked to less favorable cycling comfort, resulting in an estimated 1,216 fewer daily rentals per unit increase in normalized humidity.
+hum (-1,216): Humidity is also normalized to [0, 1]. A 1-unit increase corresponds to moving from the minimum to maximum observed humidity. The model estimates about 1,216 fewer daily rentals for a full 1-unit increase in normalized humidity (about 122 fewer rentals for a 0.1 increase), consistent with reduced cycling comfort at higher humidity.
+
+weathersitLight_Rain (-1,939): Compared to clear weather conditions, days classified as light rain/snow are associated with approximately 1,939 fewer daily rentals on average, controlling for temperature and other predictors. This effect is practically meaningful, reflecting reduced willingness to bike in adverse conditions.
 
 
 # -------------------- Statistical Significance vs. Practical Relevance -----------------------
 
-All predictors in the model are statistically significant at conventional levels (p < 0.05), though their practical importance varies substantially.
+Many predictors in the model are statistically significant at conventional levels (p < 0.05), though their practical importance varies substantially.
 
 **High Statistical and Practical Significance:** Temperature ($\beta$ = 4,008) and year ($\beta$ = 2,018) exhibit both strong statistical significance (p < 0.001) and large effect sizes, making them the most important predictors for understanding rental variation.
 
@@ -100,22 +118,22 @@ This distinction highlights that statistical significance (rejecting the null hy
 
 The validity of the baseline OLS model was evaluated using standard diagnostic plots to check key linear regression assumptions.
 
-```{r diagonstic plots, fig.height=10, fig.width=8}
-par(mfrow = c(3,2))
-
-plot(model1, which = 1, main = "Residuals vs Fitted Values")
-
-plot(model1, which = 2, main = "normal Q–Q plot of residuals")
-
-plot(model1, which = 3, main = "Assessment of Constant Variance")
-
-plot(model1, which = 4, main = "Cook’s distance")
-
+```{r diagnostic-plots-baseline, fig.height=10, fig.width=6.5, fig.show='hold'}
+par(mfrow = c(3, 2))
+plot(model1, which = 1)
+plot(model1, which = 2)
+plot(model1, which = 3)
+plot(model1, which = 4)
+plot(model1, which = 5)
 plot(bike_data$temp, residuals(model1),
      xlab = "Temperature", ylab = "Residuals",
      main = "Residuals vs Key Predictor (Temperature)")
 abline(h = 0, col = "green", lty = 2)
-
+```
+```{=latex}
+\begin{center}
+\captionof{figure}{Diagnostic plots for the baseline model assessing linear regression assumptions}
+\end{center}
 ```
 
 # --------- Identified Violations ---------
@@ -128,17 +146,17 @@ abline(h = 0, col = "green", lty = 2)
 
 # --------- Transformation Strategy ---------
 
-To address heteroscedasticity and improve model diagnostics, we applied a **log transformation** to the response variable: log(cnt).
+To address heteroscedasticity and improve model diagnostics, we applied a **log transformation** to the response variable: \(\log(\text{cnt} + 1)\).
 
 **Rationale:** Log transformations are standard practice for count data to stabilize variance and linearize exponential growth trends. This transformation is particularly appropriate when the variance of the response increases proportionally with its mean.
 
 ```{r fit-log-model}
 # Fit log-transformed model
-model2 <- lm(log(cnt) ~ temp + atemp + hum + windspeed + season + weathersit + 
+model2 <- lm(log(cnt + 1) ~ temp + atemp + hum + windspeed + season + weathersit + 
              yr + mnth + holiday + weekday, data = bike_data)
 ```
 
-```{r diagnostic-plots-log, fig.height=6, fig.width=7, fig.cap="Diagnostic plots for log-transformed model showing improved fit"}
+```{r diagnostic-plots-log, fig.height=6, fig.width=6.5, fig.cap="Diagnostic plots for log-transformed model showing improved fit"}
 par(mfrow = c(2, 2))
 plot(model2, which = 1:4)
 ```
@@ -190,10 +208,10 @@ kable(comparison,
 
 Following the transformation analysis in Part II, we use the log-transformed model as our baseline for collinearity evaluation:
 
-**Model:** log(cnt) ~ season + yr + mnth + holiday + weekday + weathersit + temp + atemp + hum + windspeed
+**Model:** log(cnt + 1) ~ season + yr + mnth + holiday + weekday + weathersit + temp + atemp + hum + windspeed
 
 ```{r setup-part3, include=FALSE}
-model3 <- lm(log(cnt) ~ season + yr + mnth + holiday + weekday +
+model3 <- lm(log(cnt + 1) ~ season + yr + mnth + holiday + weekday +
               weathersit + temp + atemp + hum + windspeed,
             data = bike_data)
 
@@ -219,7 +237,7 @@ kable(round(cor_matrix, 3),
 
 The correlation matrix reveals one critically important finding: temperature (temp) and feeling temperature (atemp) exhibit an extremely strong positive correlation of r = **`r round(cor_matrix["temp", "atemp"], 3)`**. This near-perfect correlation is expected, as feeling temperature is primarily determined by actual temperature, with minor adjustments for humidity and wind chill. All other pairwise correlations are weak to moderate (|r| < 0.25), indicating no additional collinearity concerns.
 
-```{r correlation-heatmap, fig.cap="Figure 1: Correlation heatmap showing strong positive correlation (red) between temp and atemp", fig.height=5}
+```{r correlation-heatmap, fig.cap="Correlation heatmap showing strong positive correlation (red) between temp and atemp", fig.height=5}
 cor_melted <- melt(cor_matrix)
 ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile(color = "white") +
@@ -232,12 +250,12 @@ ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
   labs(title = "Correlation Heatmap of Numeric Predictors", x = "", y = "")
 ```
 
-```{r correlation-matrix-plot, fig.cap="Figure 2: Correlation matrix of numeric predictors showing triangular layout", fig.height=5.5, fig.width=5.5}
+```{r correlation-matrix-plot, fig.cap="Correlation matrix of numeric predictors showing triangular layout", fig.height=5.5, fig.width=5.5, out.width='0.95\\linewidth'}
 corrplot(cor_matrix, method = "color", type = "upper",
          addCoef.col = "black", tl.col = "black", tl.srt = 45,
-         number.cex = 0.9, 
+         number.cex = 0.9,
          title = "Correlation Matrix of Numeric Predictors",
-         mar = c(0, 0, 2, 0),
+         mar = c(0, 0, 2, 1),
          col = colorRampPalette(c("#67001F", "#B2182B", "#D6604D", "#F4A582",
                                    "#FDDBC7", "#FFFFFF", "#D1E5F0", "#92C5DE",
                                    "#4393C3", "#2166AC", "#053061"))(200))
@@ -273,7 +291,7 @@ kable(vif_numeric,
 
 The VIF analysis confirms and quantifies the collinearity problem identified in the correlation matrix. Both temp (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "temp"], 2)`) and atemp (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "atemp"], 2)`) exhibit severe multicollinearity, with VIF values far exceeding the threshold of 10. This means the standard errors of these coefficient estimates are inflated by a factor of approximately $\sqrt{VIF}$ $\approx$ 9 for temp and $\approx$ 8.4 for atemp. In contrast, humidity (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "hum"], 2)`) and windspeed (VIF = `r round(vif_numeric$VIF[vif_numeric$Predictor == "windspeed"], 2)`) show no multicollinearity concerns.
 
-```{r vif-plot, fig.cap="Figure 3: VIF values for numeric predictors. Both temp and atemp far exceed the severe threshold (red line at VIF = 10)", fig.height=5}
+```{r vif-plot, fig.cap="VIF values for numeric predictors. Both temp and atemp far exceed the severe threshold (red line at VIF = 10)", fig.height=5}
 ggplot(vif_numeric, aes(x = reorder(Predictor, VIF), y = VIF)) +
   geom_bar(stat = "identity", fill = "steelblue") +
   geom_hline(yintercept = 5, color = "orange", 
@@ -299,7 +317,7 @@ Based on our analysis of the log-transformed model, we have identified **two pre
 
 **Physical Explanation:** Feeling temperature (atemp) is calculated as a function of actual temperature with minor adjustments for humidity and wind chill. Since actual temperature is the dominant component in this calculation, the two variables contain nearly identical information about thermal conditions.
 
-```{r scatterplot, fig.cap="Figure 4: Scatterplot of atemp vs temp showing near-perfect linear relationship", fig.height=5}
+```{r scatterplot, fig.cap="Scatterplot of atemp vs temp showing near-perfect linear relationship", fig.height=5}
 ggplot(bike_data, aes(x = atemp, y = temp)) +
   geom_point(alpha = 0.5, color = "steelblue") +
   geom_smooth(method = "lm", color = "red", se = TRUE) +
@@ -336,7 +354,7 @@ Several strategies exist for addressing multicollinearity in the log-transformed
 **1. Remove One Collinear Predictor (Recommended):** Since temp and atemp contain nearly identical information, we can remove one while retaining most predictive power. We recommend **removing atemp and keeping temp**, as actual temperature is more fundamental, directly measurable, and scientifically interpretable.
 
 ```{r reduced-model, include=FALSE}
-model_reduced <- lm(log(cnt) ~ season + yr + mnth + holiday + weekday +
+model_reduced <- lm(log(cnt + 1) ~ season + yr + mnth + holiday + weekday +
                       weathersit + temp + hum + windspeed,
                     data = bike_data)
 
@@ -384,6 +402,433 @@ For this analysis, we recommend **Strategy 1: removing atemp and retaining temp*
 
 \newpage
 
+# ------------ Part IV: Model Selection and Validation ------------
+
+We evaluate out-of-sample predictive performance using **10-fold cross-validation** and perform **model selection** using **stepwise selection (AIC)**. Consistent with the transformation guidance in the assignment, we use a log-transformed outcome \( \log(\text{cnt} + 1) \) for these procedures and report predictive error using **RMSE on the original scale** (rentals) by back-transforming predictions: \(\widehat{\text{cnt}} = \exp(\widehat{\log(\text{cnt}+1)}) - 1\).
+
+```{r setup-part4, include=FALSE}
+set.seed(210)
+
+# Modeling dataset: remove ID/date and leakage variables
+bike_model <- bike_data %>%
+  dplyr::select(-instant, -dteday, -casual, -registered)
+
+# Transformed response
+bike_model$log_cnt <- log(bike_model$cnt + 1)
+
+# Baseline model (log scale) using collinearity-mitigated weather set
+baseline4 <- lm(log_cnt ~ season + yr + mnth + holiday + weekday +
+                  weathersit + temp + hum + windspeed,
+                data = bike_model)
+
+# Create 10-fold split IDs (fixed for fair comparisons)
+K <- 10
+n <- nrow(bike_model)
+fold_id <- sample(rep(1:K, length.out = n))
+
+# Helper: compute per-fold RMSE on log and original scales
+cv_rmse <- function(model_formula, data, fold_id) {
+  K <- max(fold_id)
+  rmse_log <- numeric(K)
+  rmse_orig <- numeric(K)
+
+  for (k in 1:K) {
+    test_idx <- which(fold_id == k)
+    train_idx <- which(fold_id != k)
+
+    fit_k <- lm(model_formula, data = data[train_idx, ])
+    pred_log <- predict(fit_k, newdata = data[test_idx, ])
+    pred_orig <- exp(pred_log) - 1
+
+    actual_log <- data$log_cnt[test_idx]
+    actual_orig <- data$cnt[test_idx]
+
+    rmse_log[k] <- sqrt(mean((actual_log - pred_log)^2))
+    rmse_orig[k] <- sqrt(mean((actual_orig - pred_orig)^2))
+  }
+
+  list(rmse_log = rmse_log, rmse_orig = rmse_orig)
+}
+```
+
+## Question 8: K-Fold Cross-Validation (Baseline)
+
+### 8.1 Cross-Validation Setup
+
+We implemented **10-fold cross-validation** to estimate out-of-sample predictive performance. The dataset was randomly partitioned into 10 folds of approximately equal size. For each fold \(k = 1, \ldots, 10\), we trained the model on the remaining 9 folds and evaluated predictions on fold \(k\). This process ensures that each observation serves as a test case exactly once, providing an unbiased estimate of generalization error.
+
+### 8.2 Performance Metric: RMSE on Original Scale
+
+Although the models are fit on the log-transformed response \( \log(\text{cnt} + 1) \), we report **RMSE on the original scale** (daily bike rentals) for interpretability. Predictions are back-transformed using \(\exp(\hat{y}) - 1\).
+
+### 8.3 Baseline Model Results
+
+We use **RMSE** as the performance metric and report the mean and variability across folds.
+
+```{r cv-baseline}
+cv_base <- cv_rmse(formula(baseline4), bike_model, fold_id)
+
+cv_base_summary <- data.frame(
+  Model = "Baseline",
+  K = K,
+  RMSE_log_mean = mean(cv_base$rmse_log),
+  RMSE_log_sd = sd(cv_base$rmse_log),
+  RMSE_orig_mean = mean(cv_base$rmse_orig),
+  RMSE_orig_sd = sd(cv_base$rmse_orig),
+  RMSE_orig_min = min(cv_base$rmse_orig),
+  RMSE_orig_max = max(cv_base$rmse_orig)
+)
+
+colnames(cv_base_summary) <- c(
+  "Model", "K",
+  "RMSE log", "SD log",
+  "RMSE orig", "SD orig",
+  "Min orig", "Max orig"
+)
+
+kable(cv_base_summary,
+      digits = 3,
+      caption = "10-Fold Cross-Validation Performance (Baseline Model)",
+      row.names = FALSE,
+      align = "c")
+```
+
+### 8.4 Visualization: Per-Fold RMSE
+
+```{r cv-baseline-plot, fig.cap="10-fold CV RMSE by fold for the baseline model (original scale: rentals)", fig.height=4.6}
+ggplot(data.frame(Fold = 1:K, RMSE = cv_base$rmse_orig),
+       aes(x = factor(Fold), y = RMSE)) +
+  geom_col(fill = "steelblue", color = "white") +
+  geom_hline(yintercept = mean(cv_base$rmse_orig), color = "red",
+             linetype = "dashed", linewidth = 1.1) +
+  labs(title = "10-Fold CV: Per-Fold RMSE (Baseline Model)",
+       subtitle = sprintf("Mean RMSE = %.2f | SD = %.2f (Original scale)",
+                          mean(cv_base$rmse_orig), sd(cv_base$rmse_orig)),
+       x = "Fold", y = "RMSE (rentals)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+## Question 9: Model Selection (Stepwise, AIC)
+
+### 9.1 Selection Criterion: AIC
+
+We apply **stepwise selection** with **AIC** as the criterion. AIC balances model fit (via log-likelihood) against model complexity using \( \text{AIC} = -2\log(L) + 2k \). We evaluate backward, forward, and both-direction stepwise procedures and retain the model with the lowest AIC.
+
+```{r stepwise-aic}
+null4 <- lm(log_cnt ~ 1, data = bike_model)
+
+step_back4 <- step(baseline4, direction = "backward", trace = 0)
+
+# Define the candidate predictor set for stepwise bounds (AIC)
+scope4 <- list(
+  lower = ~ 1,
+  upper = ~ season + yr + mnth + holiday + weekday + weathersit + temp + hum + windspeed
+)
+
+step_fwd4 <- step(null4,
+                  scope = scope4,
+                  direction = "forward", trace = 0)
+step_both4 <- step(baseline4,
+                   scope = scope4,
+                   direction = "both", trace = 0)
+
+aic_tbl <- data.frame(
+  Procedure = c("Backward", "Forward", "Stepwise (Both)"),
+  AIC = c(AIC(step_back4), AIC(step_fwd4), AIC(step_both4))
+)
+
+kable(aic_tbl,
+      digits = 2,
+      caption = "AIC by Selection Procedure",
+      row.names = FALSE,
+      align = "c")
+
+best_proc <- aic_tbl$Procedure[which.min(aic_tbl$AIC)]
+selected4 <- switch(best_proc,
+                    "Backward" = step_back4,
+                    "Forward" = step_fwd4,
+                    "Stepwise (Both)" = step_both4)
+
+selected_formula4 <- formula(selected4)
+```
+
+### 9.2 Selection Results
+
+Selected model (note that `log_cnt` is defined as \( \log(\text{cnt} + 1) \) in this analysis):
+
+```{r selected-formula, results='asis'}
+cat("Selected model formula:\n")
+print(selected_formula4)
+```
+
+## Question 10: Compare Selected vs Baseline (In-sample + CV)
+
+### 10.1 In-Sample Performance
+
+```{r cv-selected-and-compare}
+cv_sel <- cv_rmse(selected_formula4, bike_model, fold_id)
+
+metrics4 <- data.frame(
+  Model = c("Baseline", "Selected (AIC)"),
+  R2 = c(summary(baseline4)$r.squared, summary(selected4)$r.squared),
+  Adj_R2 = c(summary(baseline4)$adj.r.squared, summary(selected4)$adj.r.squared),
+  CV_RMSE_orig_mean = c(mean(cv_base$rmse_orig), mean(cv_sel$rmse_orig)),
+  CV_RMSE_orig_sd = c(sd(cv_base$rmse_orig), sd(cv_sel$rmse_orig)),
+  CV_RMSE_log_mean = c(mean(cv_base$rmse_log), mean(cv_sel$rmse_log)),
+  CV_RMSE_log_sd = c(sd(cv_base$rmse_log), sd(cv_sel$rmse_log)),
+  n_parameters = c(length(coef(baseline4)), length(coef(selected4)))
+)
+
+colnames(metrics4) <- c(
+  "Model", "R2", "Adj R2",
+  "RMSE (orig)", "SD (orig)",
+  "RMSE (log)", "SD (log)",
+  "Params"
+)
+
+kable(metrics4,
+      digits = 4,
+      caption = "Baseline vs Selected Model: In-sample Fit and 10-Fold CV Performance",
+      row.names = FALSE,
+      align = "c")
+```
+
+```{r adjr2-plot, fig.cap="Adjusted R2 comparison (baseline vs selected model)", fig.height=4.4}
+adjr2_df <- data.frame(
+  Model = c("Baseline", "Selected"),
+  Adj_R2 = c(summary(baseline4)$adj.r.squared, summary(selected4)$adj.r.squared)
+)
+
+ggplot(adjr2_df, aes(x = Model, y = Adj_R2, fill = Model)) +
+  geom_col(color = "white", width = 0.6) +
+  scale_fill_manual(values = c(Baseline = "steelblue", Selected = "#E8855A")) +
+  labs(title = "Adjusted R2: Baseline vs Selected Model",
+       y = "Adjusted R2") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        legend.position = "none")
+```
+
+### 10.2 Cross-Validated Performance
+
+```{r cv-compare-fold-plot, fig.cap="Fold-level RMSE comparison (baseline vs selected model) on the original scale", fig.height=4.8}
+compare_df <- data.frame(
+  Fold = rep(1:K, 2),
+  RMSE = c(cv_base$rmse_orig, cv_sel$rmse_orig),
+  Model = rep(c("Baseline", "Selected"), each = K)
+)
+
+ggplot(compare_df, aes(x = factor(Fold), y = RMSE, fill = Model)) +
+  geom_col(position = "dodge", color = "white") +
+  scale_fill_manual(values = c(Baseline = "steelblue", Selected = "#E8855A")) +
+  labs(title = "10-Fold CV: Baseline vs Selected Model",
+       subtitle = sprintf("Mean RMSE — Baseline: %.2f | Selected: %.2f (Original scale)",
+                          mean(cv_base$rmse_orig), mean(cv_sel$rmse_orig)),
+       x = "Fold", y = "RMSE (rentals)", fill = "Model") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+```
+
+```{r mean-cv-rmse-plot, fig.cap="Mean CV RMSE comparison (original scale)", fig.height=4.4}
+rmse_mean_df <- data.frame(
+  Model = c("Baseline", "Selected"),
+  RMSE = c(mean(cv_base$rmse_orig), mean(cv_sel$rmse_orig))
+)
+
+ggplot(rmse_mean_df, aes(x = Model, y = RMSE, fill = Model)) +
+  geom_col(color = "white", width = 0.6) +
+  scale_fill_manual(values = c(Baseline = "steelblue", Selected = "#E8855A")) +
+  labs(title = "Mean 10-Fold CV RMSE: Baseline vs Selected Model",
+       y = "RMSE (rentals)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        legend.position = "none")
+```
+
+### 10.3 Discussion
+
+The selected model achieves slightly lower cross-validated RMSE while using fewer parameters, indicating a modest but consistent improvement in predictive performance and parsimony. The adjusted \(R^2\) drops only marginally, suggesting that the removed predictor(s) contributed little unique explanatory power once seasonality and weather were accounted for.
+
+\newpage
+
+# ------------ Part V: Ridge and Lasso Regression ------------
+
+To address prediction and multicollinearity simultaneously, we fit **ridge** and **lasso** regression models using `glmnet`. We select the tuning parameter \(\lambda\) via **10-fold cross-validation**, using the same fold assignments as Part IV for fair comparison. Because ridge/lasso are sensitive to predictor scaling, `glmnet` **standardizes predictors by default**.
+
+For regularization, we intentionally include both **temp** and **atemp** (known to be strongly collinear) to illustrate how ridge and lasso behave under multicollinearity.
+
+```{r part5-setup, include=FALSE}
+# Design matrix for glmnet (includes collinear temp + atemp)
+x_full <- model.matrix(
+  log_cnt ~ season + yr + mnth + holiday + weekday + weathersit +
+    temp + atemp + hum + windspeed,
+  data = bike_model
+)[, -1]
+
+y_log <- bike_model$log_cnt
+
+# Helper to find closest lambda index
+lambda_index <- function(lambda_seq, lambda_value) {
+  which.min(abs(lambda_seq - lambda_value))
+}
+
+# Helper to compute fold RMSE on log and original scales
+rmse_by_fold_from_predlog <- function(pred_log, data, fold_id) {
+  K <- max(fold_id)
+  rmse_log <- numeric(K)
+  rmse_orig <- numeric(K)
+
+  for (k in 1:K) {
+    idx <- which(fold_id == k)
+    pred_k_log <- pred_log[idx]
+    pred_k_orig <- exp(pred_k_log) - 1
+
+    actual_k_log <- data$log_cnt[idx]
+    actual_k_orig <- data$cnt[idx]
+
+    rmse_log[k] <- sqrt(mean((actual_k_log - pred_k_log)^2))
+    rmse_orig[k] <- sqrt(mean((actual_k_orig - pred_k_orig)^2))
+  }
+
+  list(rmse_log = rmse_log, rmse_orig = rmse_orig)
+}
+```
+
+## Question 11: Fit Ridge and Lasso (CV \(\lambda\))
+
+```{r ridge-lasso-fit, include=FALSE}
+ridge_cv <- cv.glmnet(
+  x = x_full, y = y_log,
+  alpha = 0,                # ridge
+  foldid = fold_id,
+  nfolds = K,
+  type.measure = "mse",
+  standardize = TRUE,
+  keep = TRUE
+)
+
+lasso_cv <- cv.glmnet(
+  x = x_full, y = y_log,
+  alpha = 1,                # lasso
+  foldid = fold_id,
+  nfolds = K,
+  type.measure = "mse",
+  standardize = TRUE,
+  keep = TRUE
+)
+```
+
+```{r ridge-lasso-cv-plots, fig.cap="Cross-validation curves for ridge (left) and lasso (right)", fig.height=4.2, fig.width=8, out.width='0.98\\linewidth'}
+par(mfrow = c(1, 2))
+plot(ridge_cv, main = "Ridge CV Curve")
+plot(lasso_cv, main = "Lasso CV Curve")
+par(mfrow = c(1, 1))
+```
+
+## Question 12: Report Selected \(\lambda\) and CV Performance
+
+We report both \(\lambda_{\min}\) (minimizes CV error) and \(\lambda_{1se}\) (largest \(\lambda\) within 1 standard error of the minimum; typically more regularized/simpler).
+
+```{r lambda-table}
+lambda_tbl <- data.frame(
+  Model = c("Ridge", "Lasso"),
+  lambda_min = c(ridge_cv$lambda.min, lasso_cv$lambda.min),
+  lambda_1se = c(ridge_cv$lambda.1se, lasso_cv$lambda.1se)
+)
+
+kable(lambda_tbl,
+      digits = 6,
+      caption = "Selected Tuning Parameters from Cross-Validation",
+      row.names = FALSE,
+      align = "c")
+```
+
+```{r ridge-lasso-cv-metrics}
+# Use out-of-fold predictions stored by cv.glmnet (keep = TRUE)
+ridge_idx_1se <- lambda_index(ridge_cv$lambda, ridge_cv$lambda.1se)
+lasso_idx_1se <- lambda_index(lasso_cv$lambda, lasso_cv$lambda.1se)
+
+pred_ridge_log_1se <- ridge_cv$fit.preval[, ridge_idx_1se]
+pred_lasso_log_1se <- lasso_cv$fit.preval[, lasso_idx_1se]
+
+cv_ridge <- rmse_by_fold_from_predlog(pred_ridge_log_1se, bike_model, fold_id)
+cv_lasso <- rmse_by_fold_from_predlog(pred_lasso_log_1se, bike_model, fold_id)
+
+# Count non-zero coefficients (excluding intercept) at lambda.1se
+lasso_coef_1se <- as.matrix(coef(lasso_cv, s = "lambda.1se"))
+nonzero_lasso <- sum(lasso_coef_1se[-1, 1] != 0)
+```
+
+```{r ridge-lasso-performance-table}
+ridge_lasso_perf <- data.frame(
+  Model = c("Ridge (lambda.1se)", "Lasso (lambda.1se)"),
+  RMSE_orig_mean = c(mean(cv_ridge$rmse_orig), mean(cv_lasso$rmse_orig)),
+  RMSE_orig_sd = c(sd(cv_ridge$rmse_orig), sd(cv_lasso$rmse_orig)),
+  RMSE_log_mean = c(mean(cv_ridge$rmse_log), mean(cv_lasso$rmse_log)),
+  RMSE_log_sd = c(sd(cv_ridge$rmse_log), sd(cv_lasso$rmse_log))
+)
+
+colnames(ridge_lasso_perf) <- c(
+  "Model", "RMSE (orig)", "SD (orig)", "RMSE (log)", "SD (log)"
+)
+
+kable(ridge_lasso_perf,
+      digits = 4,
+      caption = "Cross-Validated Performance for Ridge and Lasso (lambda.1se)",
+      row.names = FALSE,
+      align = "c")
+```
+
+## Question 13: Compare Ridge, Lasso, and Selected OLS
+
+```{r part5-comparison-table}
+comparison5 <- data.frame(
+  Model = c("Selected OLS (AIC)", "Ridge (lambda.1se)", "Lasso (lambda.1se)"),
+  CV_RMSE_orig_mean = c(mean(cv_sel$rmse_orig), mean(cv_ridge$rmse_orig), mean(cv_lasso$rmse_orig)),
+  CV_RMSE_orig_sd   = c(sd(cv_sel$rmse_orig),   sd(cv_ridge$rmse_orig),   sd(cv_lasso$rmse_orig)),
+  CV_RMSE_log_mean  = c(mean(cv_sel$rmse_log),  mean(cv_ridge$rmse_log),  mean(cv_lasso$rmse_log)),
+  CV_RMSE_log_sd    = c(sd(cv_sel$rmse_log),    sd(cv_ridge$rmse_log),    sd(cv_lasso$rmse_log)),
+  n_parameters      = c(length(coef(selected4)), length(coef(ridge_cv, s = "lambda.1se")), nonzero_lasso + 1)
+)
+
+colnames(comparison5) <- c(
+  "Model",
+  "RMSE (orig)", "SD (orig)",
+  "RMSE (log)", "SD (log)",
+  "Params"
+)
+
+kable(comparison5,
+      digits = 4,
+      caption = "Out-of-sample Performance Comparison (10-fold CV)",
+      row.names = FALSE,
+      align = "c")
+```
+
+```{r part5-coefficients, results='asis'}
+cat("Non-zero lasso coefficients at lambda.1se (excluding intercept):\n")
+lasso_coef_df <- data.frame(
+  Term = rownames(lasso_coef_1se),
+  Coefficient = as.numeric(lasso_coef_1se[, 1]),
+  row.names = NULL
+)
+lasso_nonzero_df <- lasso_coef_df %>%
+  filter(Term != "(Intercept)", Coefficient != 0) %>%
+  arrange(desc(abs(Coefficient)))
+print(head(lasso_nonzero_df, 20))
+```
+
+### Discussion (Predictive Accuracy, Interpretability, Collinearity)
+
+- **Predictive accuracy**: Compare mean CV RMSE across models (Table above). Regularization may improve out-of-sample performance, especially when predictors are correlated.
+- **Interpretability**: The selected OLS model is easy to interpret but may be unstable under collinearity. Ridge keeps all predictors with shrunk coefficients; lasso produces a simpler sparse model by setting some coefficients to zero.
+- **Effect on collinearity**: Ridge tends to **share** weight across correlated predictors (e.g., temp and atemp), reducing variance inflation. Lasso tends to **choose** one of a correlated pair and drop the other, which can improve interpretability but may be unstable if the correlated predictors contain nearly identical information.
+
+\newpage
+
 # Conclusion
 
 This comprehensive analysis of the bike sharing dataset demonstrates the application of fundamental linear modeling techniques and diagnostic procedures. 
@@ -394,4 +839,8 @@ This comprehensive analysis of the bike sharing dataset demonstrates the applica
 
 **Part III** identified severe multicollinearity between temperature and feeling temperature (r = 0.992, VIF > 70), demonstrating how collinearity inflates standard errors and destabilizes coefficient estimates without harming predictive accuracy. The recommended mitigation—removing atemp—successfully reduces VIF to acceptable levels while maintaining model performance.
 
-The log-transformed model with atemp removed serves as our preferred specification, balancing theoretical validity, interpretability, and predictive performance for subsequent model selection and regularization analyses in Parts IV and V.
+**Part IV** evaluated out-of-sample predictive performance using 10-fold cross-validation and applied stepwise selection using AIC. The selected model was compared against the baseline using both in-sample fit (adjusted \(R^2\)) and cross-validated RMSE on the original rental scale.
+
+**Part V** compared ridge regression, lasso regression, and the selected OLS model. Cross-validation results indicated that the selected OLS model achieved the best predictive accuracy (lowest CV RMSE on the original rental scale), while ridge and lasso provided principled ways to handle multicollinearity by shrinking coefficients (ridge) or selecting a sparse subset of predictors (lasso). Even when regularization did not outperform OLS in RMSE, it improved stability and interpretability in the presence of highly correlated predictors such as temp and atemp.
+
+The log-transformed model with collinearity addressed serves as a strong, interpretable specification for predicting daily bike rentals.
