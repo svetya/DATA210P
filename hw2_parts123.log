@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2026.1.14)  3 FEB 2026 22:29
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2026.1.14)  4 FEB 2026 09:00
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -542,54 +542,55 @@ File: hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf Graphic file (type 
 Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf  used on input line 778.
 (pdftex.def)             Requested size: 469.75386pt x 332.24043pt.
 [19{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-mathex.enc}] [20 <./hw2_parts123_files/figure-latex/cv-baseline-plot-1.pdf>]
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 816.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 825.
 (c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 )
 <hw2_parts123_files/figure-latex/adjr2-plot-1.pdf, id=232, 469.755pt x 317.185pt>
 File: hw2_parts123_files/figure-latex/adjr2-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/adjr2-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/adjr2-plot-1.pdf  used on input line 888.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/adjr2-plot-1.pdf  used on input line 902.
 (pdftex.def)             Requested size: 469.75386pt x 317.1842pt.
-<hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf, id=233, 469.755pt x 346.29375pt>
+ignored error: Infinite glue shrinkage found in box being split [21]
+<hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf, id=244, 469.755pt x 346.29375pt>
 File: hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf  used on input line 900.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf  used on input line 936.
 (pdftex.def)             Requested size: 469.75386pt x 346.2929pt.
-<hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf, id=234, 469.755pt x 317.185pt>
+<hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf, id=245, 469.755pt x 317.185pt>
 File: hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf  used on input line 909.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf  used on input line 945.
 (pdftex.def)             Requested size: 469.75386pt x 317.1842pt.
-[21] [22 <./hw2_parts123_files/figure-latex/adjr2-plot-1.pdf>] [23 <./hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf>] [24 <./hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf>]
-<hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf, id=280, 578.16pt x 303.1325pt>
+[22] [23 <./hw2_parts123_files/figure-latex/adjr2-plot-1.pdf>] [24 <./hw2_parts123_files/figure-latex/cv-compare-fold-plot-1.pdf>] [25 <./hw2_parts123_files/figure-latex/mean-cv-rmse-plot-1.pdf>]
+<hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf, id=286, 578.16pt x 303.1325pt>
 File: hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf Graphic file (type pdf)
 <use hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf>
-Package pdftex.def Info: hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf  used on input line 947.
+Package pdftex.def Info: hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf  used on input line 983.
 (pdftex.def)             Requested size: 460.35791pt x 241.36847pt.
-[25 <./hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf>]
-LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1059.
+[26 <./hw2_parts123_files/figure-latex/ridge-lasso-cv-plots-1.pdf>]
+LaTeX Font Info:    Trying to load font information for TS1+lmr on input line 1095.
 (c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/lm/ts1lmr.fd
 File: ts1lmr.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
-) [26{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}] [27] (./hw2_parts123.aux)
+) [27{c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/enc/dvips/lm/lm-ts1.enc}] [28] (./hw2_parts123.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-12-29>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 13098 strings out of 469519
- 213082 string characters out of 5467704
- 638256 words of memory out of 5000000
- 41462 multiletter control sequences out of 15000+600000
+ 13101 strings out of 469519
+ 213102 string characters out of 5467704
+ 638323 words of memory out of 5000000
+ 41463 multiletter control sequences out of 15000+600000
  676984 words of font info for 75 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  89i,16n,93p,904b,620s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmex10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi12.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi8.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb><c:/Users/Anish/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on hw2_parts123.pdf (27 pages, 754136 bytes).
+Output written on hw2_parts123.pdf (28 pages, 756233 bytes).
 PDF statistics:
- 479 PDF objects out of 1000 (max. 8388607)
- 391 compressed objects within 4 object streams
- 92 named destinations out of 1000 (max. 500000)
+ 484 PDF objects out of 1000 (max. 8388607)
+ 395 compressed objects within 4 object streams
+ 94 named destinations out of 1000 (max. 500000)
  256 words of extra memory for PDF output out of 10000 (max. 10000000)
 

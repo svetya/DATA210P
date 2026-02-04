@@ -69,6 +69,7 @@ model1 = lm(cnt ~ temp + atemp + hum + windspeed + season + weathersit + yr + mn
 
 ```{r results='asis'}
 stargazer(model1, type = "latex",
+          header = FALSE,
           title = "Baseline Multiple Linear Model Results",
           align = TRUE)
 ```
@@ -536,12 +537,13 @@ step_both4 <- step(baseline4,
 
 aic_tbl <- data.frame(
   Procedure = c("Backward", "Forward", "Stepwise (Both)"),
-  AIC = c(AIC(step_back4), AIC(step_fwd4), AIC(step_both4))
+  AIC = c(AIC(step_back4), AIC(step_fwd4), AIC(step_both4)),
+  Parameters = c(length(coef(step_back4)), length(coef(step_fwd4)), length(coef(step_both4)))
 )
 
 kable(aic_tbl,
       digits = 2,
-      caption = "AIC by Selection Procedure",
+      caption = "Model Selection Results by Procedure (AIC)",
       row.names = FALSE,
       align = "c")
 
@@ -555,6 +557,10 @@ selected_formula4 <- formula(selected4)
 ```
 
 ### 9.2 Selection Results
+
+The three automated selection procedures yielded the results shown in Table above. In this dataset, the procedures often converge to the same final model because multiple predictors contribute overlapping information about ridership patterns (e.g., calendar effects and weather conditions). When the lowest AIC is tied across procedures, we select the **backward elimination** result for reporting.
+
+The selected model is typically more parsimonious than the baseline (fewer parameters) while maintaining similar predictive performance. In particular, if `weekday` is removed, it suggests that after accounting for seasonal patterns, monthly effects, and weather conditions, day-of-week provides limited additional predictive information for daily rentals.
 
 Selected model (note that `log_cnt` is defined as \( \log(\text{cnt} + 1) \) in this analysis):
 
@@ -612,6 +618,28 @@ ggplot(adjr2_df, aes(x = Model, y = Adj_R2, fill = Model)) +
 ```
 
 ### 10.2 Cross-Validated Performance
+
+The key comparison is out-of-sample predictive performance measured by **10-fold CV RMSE on the original scale** (rentals). The improvement is reported as the reduction in mean RMSE relative to the baseline.
+
+```{r cv-rmse-improvement-table}
+rmse_compare_tbl <- data.frame(
+  Model = c("Baseline", "Selected"),
+  Mean_CV_RMSE = c(mean(cv_base$rmse_orig), mean(cv_sel$rmse_orig))
+)
+rmse_compare_tbl$Improvement <- c("—",
+                                 sprintf("%.2f (%.1f%%)",
+                                         rmse_compare_tbl$Mean_CV_RMSE[1] - rmse_compare_tbl$Mean_CV_RMSE[2],
+                                         100 * (rmse_compare_tbl$Mean_CV_RMSE[1] - rmse_compare_tbl$Mean_CV_RMSE[2]) /
+                                           rmse_compare_tbl$Mean_CV_RMSE[1]))
+
+colnames(rmse_compare_tbl) <- c("Model", "Mean CV RMSE (rentals)", "Improvement")
+
+kable(rmse_compare_tbl,
+      digits = 2,
+      caption = "Cross-Validated Predictive Performance (10-fold CV RMSE)",
+      row.names = FALSE,
+      align = "c")
+```
 
 ```{r cv-compare-fold-plot, fig.cap="Fold-level RMSE comparison (baseline vs selected model) on the original scale", fig.height=4.8}
 compare_df <- data.frame(
